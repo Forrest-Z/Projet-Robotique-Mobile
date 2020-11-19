@@ -1,5 +1,4 @@
 #include "move_pguard/utils.h"
-#include <tf/transform_datatypes.h>
 
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -12,11 +11,9 @@ namespace move_pguard
 {
 geometry_msgs::PoseStamped getRobotPose(const costmap_2d::Costmap2DROS& costmap)
 {
-  tf::Stamped<tf::Pose> robot_pose;
+  geometry_msgs::PoseStamped robot_pose;
   costmap.getRobotPose(robot_pose);
-  geometry_msgs::PoseStamped robot_pose_msg;
-  tf::poseStampedTFToMsg(robot_pose, robot_pose_msg);
-  return robot_pose_msg;
+  return robot_pose;
 }
 
 double angle(const geometry_msgs::PoseStamped& pose_from, const geometry_msgs::PoseStamped& pose_to)

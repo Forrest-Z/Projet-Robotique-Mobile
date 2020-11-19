@@ -20,10 +20,10 @@ namespace local
 BasicLocalPlanner::BasicLocalPlanner()
   : global_plan_()
   , subgoal_()
-  , velocity_max_(0.5F) //1.4F)
-  , velocity_gain_(1.2F) //2.0F)
-  , angular_velocity_max_(0.5F) //0.7F)
-  , angular_velocity_gain_(1.6F) //2.0F)
+  , velocity_max_(1.4F)
+  , velocity_gain_(2.0F)
+  , angular_velocity_max_(0.7F)
+  , angular_velocity_gain_(2.0F)
   , angular_slowdown_gain_(0.8 / M_PI)
   , min_goal_distance2_(1.0F)
   , path_planner_()
@@ -38,11 +38,9 @@ BasicLocalPlanner::BasicLocalPlanner()
   lidar_sub_ = n.subscribe(lidar_topic, 1, &BasicLocalPlanner::laserScanCallback, this);
 }
 
-BasicLocalPlanner::~BasicLocalPlanner()
-{
-}
+BasicLocalPlanner::~BasicLocalPlanner() {}
 
-void BasicLocalPlanner::initialize(std::string name, tf::TransformListener*, costmap_2d::Costmap2DROS* costmap_ros)
+void BasicLocalPlanner::initialize(std::string name, tf2_ros::Buffer*, costmap_2d::Costmap2DROS* costmap_ros)
 {
   costmap_ros_ = costmap_ros;
   path_planner_.initialize(name + "/planner", costmap_ros);
@@ -55,17 +53,15 @@ void BasicLocalPlanner::configCallback(LocalPlannerConfig& config, unsigned int)
   safe_radius_ = config.safe_radius;
   velocity_max_ = config.max_linear_velocity;
   angular_velocity_max_ = config.max_angular_velocity;
-  velocity_gain_ = config.velocity_gain;
-  angular_velocity_gain_ = config.angular_velocity_gain;
-  angular_slowdown_gain_ = config.angular_slowdown_gain;
-
   // Ensure the critical radius is lower than the safe radius
   if (safe_radius_ < critical_radius_)
   {
     safe_radius_ = critical_radius_;
     config.safe_radius = critical_radius_;
   }
-
+  velocity_gain_ = config.velocity_gain;
+  angular_velocity_gain_ = config.angular_velocity_gain;
+  angular_slowdown_gain_ = config.angular_slowdown_gain;
   ROS_INFO_STREAM("New configuration: {Crit radius: " << critical_radius_ <<  //
                   ", Safe radius: " << safe_radius_ <<                        //
                   ", Max linear velocity: " << velocity_max_ <<               //
@@ -193,7 +189,7 @@ bool BasicLocalPlanner::isGoalReached()
 ros::Duration BasicLocalPlanner::estimateRemainingTime()
 {
   if (velocity_max_ < 1e-5)
-    return ros::Duration(); // Too slow, return invalid duration
+    return ros::Duration();  // Too slow, return invalid duration
   geometry_msgs::PoseStamped robot_pose = getRobotPose(*costmap_ros_);
   ros::Duration remaining_time(distance(subgoal_, robot_pose) / velocity_max_ / 0.95);
   return remaining_time;
@@ -201,8 +197,6 @@ ros::Duration BasicLocalPlanner::estimateRemainingTime()
 
 void BasicLocalPlanner::laserScanCallback(const sensor_msgs::LaserScan& msg)
 {
-  // Compute the safety gauge
-  //float nearest_obstacle = *std::min_element(msg.ranges.begin(), msg.ranges.end());
   float angle = msg.angle_min;
   float angle_offset = (msg.angle_max + msg.angle_min) / 2.0;
   float nearest_obstacle = msg.ranges.front() * (2 / M_PI * std::abs(angle - angle_offset) + 1);
@@ -213,6 +207,7 @@ void BasicLocalPlanner::laserScanCallback(const sensor_msgs::LaserScan& msg)
     if (distance < nearest_obstacle)
       nearest_obstacle = distance;
   }
+  // Compute the safety gauge
   safety_ = (nearest_obstacle - critical_radius_) / (safe_radius_ - critical_radius_);
   safety_ = std::max(safety_, 0.0F);
   safety_ = std::min(safety_, 1.0F);

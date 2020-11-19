@@ -18,7 +18,7 @@ namespace cm = costmap_2d;
 
 namespace move_pguard
 {
-MovePGuard::MovePGuard(std::string name, tf::TransformListener* buffer, cm::Costmap2DROS* global_costmap_ros,
+MovePGuard::MovePGuard(std::string name, tf2_ros::Buffer* buffer, cm::Costmap2DROS* global_costmap_ros,
                        cm::Costmap2DROS* local_costmap_ros)
   : global_planner_(nullptr)
   , local_planner_(nullptr)

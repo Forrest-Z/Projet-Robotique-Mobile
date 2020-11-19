@@ -32,7 +32,7 @@ public:
    * @param local_costmap A pointer to the local costmap to use
    * @throw std::invalid_argument When a pointer is `null`
    */
-  MovePGuard(std::string name, tf::TransformListener* buffer, costmap_2d::Costmap2DROS* global_costmap,
+  MovePGuard(std::string name, tf2_ros::Buffer* buffer, costmap_2d::Costmap2DROS* global_costmap,
              costmap_2d::Costmap2DROS* local_costmap);
 
   ~MovePGuard();

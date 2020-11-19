@@ -52,7 +52,7 @@ public:
    * @param tf A pointer to a transform listener
    * @param costmap_ros The costmap to use for assigning costs to local plans
    */
-  virtual void initialize(std::string name,  tf::TransformListener* tf, costmap_2d::Costmap2DROS* costmap_ros) override;
+  virtual void initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros) override;
 
 protected:
   /**

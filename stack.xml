@@ -1,0 +1,8 @@
+<stack>
+    <description brief="Projet de robotique mobile"></description>
+    <author>Florian Cormee</author>
+    <license>GPL</license>
+    <review status="unreviewed" notes="" />
+    <url>https://github.com/Florian-Cormee/Projet-Robotique-Mobile</url>
+    <depend stack="ros" />
+</stack>
