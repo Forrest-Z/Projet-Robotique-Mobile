@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>move_pguard</name>
+  <name>move_minilab</name>
   <version>0.0.0</version>
-  <description>The move_pguard package</description>
+  <description>The move_minilab package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/move_pguard</url> -->
+  <!-- <url type="website">http://wiki.ros.org/move_minilab</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
@@ -49,20 +49,14 @@
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-  <depend>roscpp</depend>
-  <depend>rospy</depend>
-  <depend>std_msgs</depend>
-  <depend>nav_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>tf</depend>
-  <depend>costmap_2d</depend>
-  <depend>nav_core</depend>
-  <depend>dynamic_reconfigure</depend>
-  <depend>actionlib_msgs</depend>
-  <depend>message_generation</depend>
-  <depend>message_runtime</depend>
+  <build_depend>roscpp</build_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <exec_depend>roscpp</exec_depend>
+
+
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
+
   </export>
 </package>

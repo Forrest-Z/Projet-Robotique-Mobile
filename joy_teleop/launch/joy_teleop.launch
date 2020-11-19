@@ -6,6 +6,6 @@
 
     <!-- Axes -->
     <node pkg="joy_teleop" type="joy_teleop_node" name="teleop">
-        <rosparam file="$(find joy_teleop)/config/teleop_joy.yaml" command="load" />
+        <rosparam file="$(find joy_teleop)/params/teleop_joy.yaml" command="load" />
     </node>
 </launch>

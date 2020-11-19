@@ -1,8 +1,0 @@
-# Define the goal
-geometry_msgs/PoseStamped target_pose
----
-# Define the result
----
-# Define a feedback message
-string description
-float32 distance
