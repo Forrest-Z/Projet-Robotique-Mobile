@@ -1,0 +1,5 @@
+<launch>
+    <!-- Turtlesim Node-->
+    <node pkg="turtlesim" type="turtlesim_node" name="sim" />
+    <include file="$(find joy_teleop)/launch/joy_teleop.launch"/>
+</launch>

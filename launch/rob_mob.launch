@@ -1,0 +1,10 @@
+<launch>
+    <!-- Simulation -->
+    <include file="$(find minilab_simulation)/launch/minilab_simulation.launch" />
+    <!-- Rviz -->
+    <node pkg="rviz" type="rivz" name="rivz" />
+    <!-- Teleop -->
+    <include file="$(find joy_teleop)/launch/joy_teleop.launch" />
+    <!-- SLAM -->
+    <node pkg="gmapping" type="slam_gmapping" name="slam"/>
+</launch>

@@ -1,0 +1,4 @@
+lin_scale: 1
+ang_scale: 1
+twist_topic: /cmd_vel
+joy_topic: /joy
