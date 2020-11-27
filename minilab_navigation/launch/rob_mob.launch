@@ -6,5 +6,7 @@
     <!-- Teleop -->
     <include file="$(find joy_teleop)/launch/joy_teleop.launch" />
     <!-- SLAM -->
-    <node pkg="gmapping" type="slam_gmapping" name="slam"/>
+    <node pkg="gmapping" type="slam_gmapping" name="slam">
+        <rosparam file="$(find minilab_navigation)/params/gmapping.yaml" command="load" />
+    </node>
 </launch>

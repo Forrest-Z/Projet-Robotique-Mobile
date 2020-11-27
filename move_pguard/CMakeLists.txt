@@ -1,18 +1,30 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(move_minilab)
+project(move_pguard)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++11) # -Wall -Wextra)
+#add_compile_options(-g)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  rospy
+  std_msgs
+  tf
+  nav_msgs
+  geometry_msgs
+  costmap_2d
+  nav_core
+  dynamic_reconfigure
+  actionlib_msgs
+  message_generation
+  message_runtime
 )
 
 ## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system)
+# find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -59,17 +71,18 @@ find_package(Boost REQUIRED COMPONENTS system)
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+add_action_files(
+  FILES
+  GoTo.action
+)
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  actionlib_msgs
+  geometry_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -86,10 +99,9 @@ find_package(Boost REQUIRED COMPONENTS system)
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+generate_dynamic_reconfigure_options(
+  cfg/LocalPlanner.cfg
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -101,9 +113,16 @@ find_package(Boost REQUIRED COMPONENTS system)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES move_minilab
-#  CATKIN_DEPENDS roscpp
+  INCLUDE_DIRS
+    include
+#  LIBRARIES move_pguard
+  CATKIN_DEPENDS
+    roscpp
+    rospy
+    std_msgs
+    geometry_msgs
+    actionlib_msgs
+    message_runtime
 #  DEPENDS system_lib
 )
 
@@ -120,7 +139,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/move_minilab.cpp
+#   src/${PROJECT_NAME}/move_pguard.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -132,9 +151,19 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node
-  src/move_minilab_node.cpp
-  src/move_minilab.cpp
-  src/map.cpp
+  src/bresenham_line.cpp
+  src/move_pguard.cpp
+  src/move_pguard_node.cpp
+  src/plan_checker.cpp
+  src/utils.cpp
+  src/goal_finder/goal_finder_base.cpp
+  src/goal_finder/hv_finder.cpp
+  src/goal_finder/raycast_finder.cpp
+  src/global/a_star_planner.cpp
+  src/global/dijkstra_planner.cpp
+  src/global/theta_star_planner.cpp
+  src/local/a_local_planner.cpp
+  src/local/basic_local_planner.cpp
 )
 
 ## Rename C++ executable without prefix
@@ -199,7 +228,7 @@ target_link_libraries(${PROJECT_NAME}_node
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_move_minilab.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_planner.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

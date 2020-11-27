@@ -1,0 +1,78 @@
+lidar_topic: "/laser_front/scan_virtual"
+# goal: "move_base_simple/goal"
+# path: "path"
+cmd_vel: "/cmd_vel" # Private topic named cmd_vel
+
+driver:
+  local:
+    critical_radius: 0.9 #m
+    safe_radius: 3 #m
+    max_linear_velocity: 1 #m/S
+    max_angular_velocity: 3.14 #rad/s
+    velocity_gain: 1.2
+    angular_velocity_gain: 1.6
+    angular_slowdown_gain: 0.8
+
+
+# Costmaps parameters
+map:
+  global:
+    # Plugins
+    plugins:
+      - { name: "static_layer", type: "costmap_2d::StaticLayer"}
+      - { name: "inflation_layer", type: "costmap_2d::InflationLayer" }
+    radius: 1
+    # Coordinate frame and tf parameters
+    global_frame: "map"
+    robot_base_frame: "base_footprint"
+    # Rate parameters
+    update_frequency: 1.0 # Hz
+    publish_frequency: 1.0 # Hz (default: 0 Hz)
+    # Map management parameters
+    rolling_window: false
+    # The following parameters can be overwritten by some layers, namely the static map layer.
+    width: 40 # m
+    height: 40 # m
+    resolution: 0.2 # m/cell
+    # Plugins configurations
+    inflation_layer:
+      inflation_radius: 1.0 # m
+      cost_scaling_factor: 5
+    static_layer:
+      unknown_cost_value: -1
+      lethal_cost_threshold: 100
+      map_topic: map
+      track_unknown_space: true
+  local:
+    # Plugins
+    plugins:
+      - { name: "obstacles_layer", type: "costmap_2d::ObstacleLayer" }
+      - { name: "inflation_layer", type: "costmap_2d::InflationLayer" }
+    radius: 1
+    # Coordinate frame and tf parameters
+    global_frame: "map"
+    robot_base_frame: "base_footprint"
+    # Rate parameters
+    update_frequency: 15.0 # Hz
+    publish_frequency: 1.0 # Hz (default: 0 Hz)
+    # Map management parameters
+    rolling_window: true
+    # The following parameters can be overwritten by some layers, namely the static map layer.
+    width: 10 # m
+    height: 10 # m
+    resolution: 0.1 # m/cell
+    # Plugins configurations
+    obstacles_layer:
+      observation_sources: "LiDAR"
+      LiDAR:
+        topic: "scan"
+        sensor_frame: "hokuyo_link"
+        data_type: "LaserScan"
+        clearing: true
+        marking: true
+        # Global filtering parameters
+        obstacle_range: 10 # m (default: 2.5)
+        raytrace_range: 10 # m (default: 3.0)
+    inflation_layer:
+      inflation_radius: 1.5 # m
+      cost_scaling_factor: 2.0
