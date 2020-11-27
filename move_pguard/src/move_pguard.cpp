@@ -197,13 +197,13 @@ void MovePGuard::updateGlobalPlan(bool is_forced)
   // Update the global path every 1 s (approximately) or if there is a
   // new goal
   ros::Time now = ros::Time::now();
-  if (is_forced)//|| now - start_.header.stamp >= ros::Duration(1, 0))
+  if (is_forced || now - start_.header.stamp >= ros::Duration(1, 0))
   {
     // Check the distance to the origin or the obstruction of the path
     PlanChecker checker(&global_plan_);
     cm::Costmap2D& costmap = *global_costmap_ros_->getCostmap();
     std::function<bool(unsigned char)> criteria = [](unsigned char cost) {
-      return cost >= cm::INSCRIBED_INFLATED_OBSTACLE && cost != cm::NO_INFORMATION;
+      return cost >= 127 && cost != cm::NO_INFORMATION;
     };
     if (is_forced || checker.isObstructed(costmap, criteria))
     {
