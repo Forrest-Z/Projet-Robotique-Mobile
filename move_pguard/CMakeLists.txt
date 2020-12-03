@@ -164,6 +164,7 @@ add_executable(${PROJECT_NAME}_node
   src/global/theta_star_planner.cpp
   src/local/a_local_planner.cpp
   src/local/basic_local_planner.cpp
+  src/local/path_follower.cpp
 )
 
 ## Rename C++ executable without prefix

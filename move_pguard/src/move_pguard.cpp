@@ -10,7 +10,8 @@
 #include "move_pguard/bresenham_line.h"
 #include "move_pguard/global/theta_star_planner.h"
 #include "move_pguard/goal_finder/hv_finder.h"
-#include "move_pguard/local/basic_local_planner.h"
+// #include "move_pguard/local/basic_local_planner.h"
+#include "move_pguard/local/path_follower.h"
 #include "move_pguard/plan_checker.h"
 #include "move_pguard/utils.h"
 
@@ -36,7 +37,8 @@ MovePGuard::MovePGuard(std::string name, tf2_ros::Buffer* buffer, cm::Costmap2DR
   global_planner_ = GlobalPlannerS(new global::ThetaStarPlanner());
   global_planner_->initialize(name + "/global", global_costmap_ros_);
   ROS_INFO_STREAM("Global planner: OK");
-  local_planner_ = LocalPlannerS(new local::BasicLocalPlanner());
+  // local_planner_ = LocalPlannerS(new local::BasicLocalPlanner());
+  local_planner_ = LocalPlannerS(new local::PathFollower());
   local_planner_->initialize(name + "/local", buffer, local_costmap_ros_);
   ROS_INFO_STREAM("Local planner: OK");
 
