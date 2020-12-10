@@ -205,9 +205,9 @@ void MovePGuard::updateGlobalPlan(bool is_forced)
     PlanChecker checker(&global_plan_);
     cm::Costmap2D& costmap = *global_costmap_ros_->getCostmap();
     std::function<bool(unsigned char)> criteria = [](unsigned char cost) {
-      return cost >= 127 && cost != cm::NO_INFORMATION;
+      return cost >= 240 && cost != cm::NO_INFORMATION;
     };
-    if (is_forced || checker.isObstructed(costmap, criteria))
+    if (is_forced)// || checker.isObstructed(costmap, criteria))
     {
       // Make the plan and store it
       ROS_INFO_STREAM("Updating the global path");

@@ -147,10 +147,9 @@ bool DijkstraPlanner::buildPath(const geometry_msgs::PoseStamped& start, const g
     geometry_msgs::PoseStamped final_pose = goal;
     float angle = std::atan2(final_pose.pose.position.y - pose.pose.position.y,
                              final_pose.pose.position.x - pose.pose.position.x);
-    final_pose.pose.orientation.w = std::cos(angle / 2);
-    final_pose.pose.orientation.z = std::sin(angle / 2);
     plan.push_back(final_pose);
   }
+  plan.at(plan.size()-1).pose.orientation = goal.pose.orientation;
   return true;
 }
 

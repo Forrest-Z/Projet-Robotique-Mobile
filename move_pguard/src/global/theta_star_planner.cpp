@@ -60,7 +60,7 @@ void ThetaStarPlanner::visit(index_t edge_i, index_t goal_i)
       // A straight line from the parent to the neighbor is possible
       Edge& parent = edges_.at(parent_i);
       potential_cost =
-          COST_GAIN * line_cost + orientationPenalty(parent_i) + parent.cost + distance(parent_i, neighbor_i);
+          COST_GAIN * line_cost + parent.cost + distance(parent_i, neighbor_i);
       if (potential_cost < neighbor.cost)
         // The straight line is a cheaper path
         setPredecessor(neighbor_i, parent_i, goal_i, potential_cost);
@@ -68,7 +68,7 @@ void ThetaStarPlanner::visit(index_t edge_i, index_t goal_i)
     else
     {
       potential_cost =
-          COST_GAIN * char_map[edge_i] + orientationPenalty(edge_i) + edge.cost + distance(edge_i, neighbor_i);
+          COST_GAIN * char_map[edge_i] + edge.cost + distance(edge_i, neighbor_i);
       if (potential_cost < neighbor.cost)
         // Reaching the neighbor from the edge is cheaper
         setPredecessor(neighbor_i, edge_i, goal_i, potential_cost);
@@ -114,42 +114,23 @@ bool ThetaStarPlanner::hasLineOfSight(index_t x0, index_t y0, index_t x1, index_
     // Check the intermediate cell and its neighbor
     unsigned char cell_cost = costmap.getCost(pose.x, pose.y);
     line_cost += cell_cost;
-    if (cell_cost >= 16)
+    if (cell_cost >= 127)
       return false;
     if (raycast.isSteep())
     {
       int x = pose.x + raycast.getStepX();
-      if (!isOutOfBound(costmap, x, pose.y) && costmap.getCost(x, pose.y) >= 16)
+      if (!isOutOfBound(costmap, x, pose.y) && costmap.getCost(x, pose.y) >= 127)
         return false;
     }
     else
     {
       int y = pose.y + raycast.getStepY();
-      if (!isOutOfBound(costmap, pose.x, y) && costmap.getCost(pose.x, y) >= 16)
+      if (!isOutOfBound(costmap, pose.x, y) && costmap.getCost(pose.x, y) >= 127)
         return false;
     }
   }
   cost_out = line_cost;
   return true;
-}
-
-float ThetaStarPlanner::orientationPenalty(index_t edge_i)
-{
-  // Convert the index to cell coordinates
-  cm::Costmap2D& costmap = getCostmap();
-  index_t mx, my;
-  costmap.indexToCells(edge_i, mx, my);
-
-  return orientationPenalty(mx, my);
-}
-
-float ThetaStarPlanner::orientationPenalty(index_t mx, index_t my)
-{
-  int dx = (int)mx - start_mx_;
-  int dy = (int)my - start_my_;
-  float angle = std::atan2(dy, dx);
-  float intensity = (1. - std::cos(angle)) / 2.; // aka. cos^2(angle / 2)
-  return 50.0F * intensity;
 }
 }  // namespace global
 }  // namespace move_pguard

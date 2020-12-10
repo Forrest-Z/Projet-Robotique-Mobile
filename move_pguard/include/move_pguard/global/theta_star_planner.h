@@ -68,21 +68,6 @@ protected:
    */
   bool hasLineOfSight(index_t x0, index_t y0, index_t x1, index_t y1, float& cost) const;
 
-  /**
-   * Compute the penalty due to the relative orientation between the edge and
-   * the robot
-   *
-   * The penalty is positive and increases with the relative orientation.
-   *
-   * @param mx The X coordinate of the edge (in cell)
-   * @param my The Y coordinate of the edge (in cell)
-   * @return A penalty (in m)
-   */
-  float orientationPenalty(index_t mx, index_t my);
-
-  /** @overload orientationPenalty(index_t) */
-  float orientationPenalty(index_t edge_i);
-
   float start_orientation_; /**< The orienation of the start pose */
   int start_mx_;            /**< The X coordinate of the start pose */
   int start_my_;            /**< The Y coordinate of the start pose */

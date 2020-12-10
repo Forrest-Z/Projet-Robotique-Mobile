@@ -6,75 +6,80 @@
 
 #include <cmath>
 
+#include "move_pguard/utils.h"
+
 namespace move_pguard
 {
 namespace local
 {
-PathFollower::PathFollower() : max_dist_from_goal_(0.05), speed_(1), l1_(0.1)
+PathFollower::PathFollower()
+  : max_dist_from_goal_(0.05), max_angle_from_goal_(0.1), speed_(1), l1_(0.5), angular_velocity_max_(M_PI), kp_(10)
 {
+  ros::NodeHandle n("~");
+  path_pub_ = n.advertise<nav_msgs::Path>("local/path", 1, true);
+  target_pub_ = n.advertise<geometry_msgs::PoseStamped>("local/target", 1, true);
+  proj_pub_ = n.advertise<geometry_msgs::PoseStamped>("local/proj", 1, true);
 }
 
-void PathFollower::initialize(std::string name, tf2_ros::Buffer*, costmap_2d::Costmap2DROS* costmap_ros)
+void PathFollower::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
 {
   costmap_ros_ = costmap_ros;
-}
-
-bool PathFollower::isGoalReached(const geometry_msgs::PoseStamped& goal)
-{
+  tf_ = tf;
 }
 
 bool PathFollower::isGoalReached()
 {
-  if (plan_.empty())
-    return true;
-
-  tf2::Vector3 p_robot;
-  double th_robot;
-  getRobotPose(p_robot, th_robot);
-  tf2::Vector3 target = computeTargetPosition(p_robot, th_robot);
-
-  tf2::Vector3 p_goal;
-  tf2::fromMsg(plan_.at(plan_.size() - 1).pose.position, p_goal);
-
-  return target.distance(p_goal) < max_dist_from_goal_;
+  return state_ == DONE;
 }
 
-void PathFollower::findNearestSegment(tf2::Vector3& begin, tf2::Vector3& end)
+bool PathFollower::setPlan(const std::vector<geometry_msgs::PoseStamped>& plan)
 {
-  tf2::Vector3 robot_pos;
-  double robot_orientation;
-  getRobotPose(robot_pos, robot_orientation);
+  plan_ = plan;
+  state_ = ROTATING;
+  next_wp_index_ = 0;
+  tf2::fromMsg(plan_.at(0).pose.position, segment_[0]);
+  tf2::fromMsg(plan_.at(1).pose.position, segment_[1]);
+  tf2::Vector3 vertex = segment_[1] - segment_[0];
+  desired_orientation_ = std::atan2(vertex.y(), vertex.x());
 
-  size_t nearest_waypoint_index(0);
-  double nearest_waypoint_distance2(1e10);
-  tf2::Vector3 position;
-  for (size_t i = 0; i < plan_.size(); ++i)
+  path_.header = plan_.at(0).header;
+  path_.poses.clear();
+  path_.poses.push_back(plan_.at(0));
+  path_.poses.push_back(plan_.at(1));
+  path_pub_.publish(path_);
+}
+
+bool PathFollower::updateSegment()
+{
+  bool is_done = false;
+  tf2::Vector3 target = computeTargetPosition();
+  geometry_msgs::PoseStamped target_msgs;
+  target_msgs.header.frame_id = costmap_ros_->getGlobalFrameID();
+  target_msgs.header.stamp = ros::Time::now();
+  target_msgs.pose.position.x = target.x();
+  target_msgs.pose.position.y = target.y();
+  target_pub_.publish(target_msgs);
+  tf2::Vector3 vertex = segment_[1] - segment_[0];
+
+  if (vertex.dot(target - segment_[0]) > vertex.length2())  // The target is beyond the vertex
   {
-    tf2::fromMsg(plan_.at(i).pose.position, position);
-    double distance2 = robot_pos.distance2(position);
-    if (distance2 < nearest_waypoint_distance2)
+    if (next_wp_index_ + 1 < plan_.size())
     {
-      nearest_waypoint_index = i;
-      nearest_waypoint_distance2 = distance2;
-      begin = position;
+      segment_[0] = segment_[1];
+      next_wp_index_++;
+      tf2::fromMsg(plan_.at(next_wp_index_).pose.position, segment_[1]);
+      geometry_msgs::PoseStamped a = path_.poses.at(1);
+      path_.poses.clear();
+      path_.poses.push_back(a);
+      path_.poses.push_back(plan_.at(next_wp_index_));
+      path_pub_.publish(path_);
+    }
+    else
+    {
+      is_done = true;
     }
   }
-  size_t segment_end_index;
-  if (nearest_waypoint_index == 0)
-    segment_end_index = 1;
-  else if (nearest_waypoint_index == plan_.size() - 1)
-    segment_end_index = nearest_waypoint_index - 1;
-  else
-  {
-    tf2::Vector3 next_waypoint, previous_waypoint;
-    tf2::fromMsg(plan_.at(nearest_waypoint_index + 1).pose.position, next_waypoint);
-    tf2::fromMsg(plan_.at(nearest_waypoint_index - 1).pose.position, previous_waypoint);
-    if (robot_pos.distance2(next_waypoint) < robot_pos.distance2(previous_waypoint))
-      segment_end_index = nearest_waypoint_index + 1;
-    else
-      segment_end_index = nearest_waypoint_index - 1;
-  }
-  tf2::fromMsg(plan_.at(segment_end_index).pose.position, end);
+  return is_done;
 }
 
 void PathFollower::findNearestPoint(const tf2::Vector3& begin, const tf2::Vector3& end, double& d, double& theta_e)
@@ -82,26 +87,101 @@ void PathFollower::findNearestPoint(const tf2::Vector3& begin, const tf2::Vector
   tf2::Vector3 robot_position;
   double robot_orientation;
   getRobotPose(robot_position, robot_orientation);
-  tf2::Vector3 target = computeTargetPosition(robot_position, robot_orientation);
+  tf2::Vector3 target = computeTargetPosition();
 
-  tf2::Vector3 segment = end - begin;
-  tf2::Vector3 point = begin + (target - begin).dot(segment) * segment.normalized();
+  tf2::Vector3 vertex = end - begin;
+  tf2::Vector3 tangent = vertex.normalized();
+  tf2::Vector3 normal;
+  normal.setX(-tangent.y());
+  normal.setY(tangent.x());
+  tf2::Vector3 point = begin + std::max((target - begin).dot(tangent), 0.0) * tangent;
 
-  double theta_seg = std::atan2(segment.y(), segment.x());
+  double theta_seg = std::atan2(vertex.y(), vertex.x());
   theta_e = robot_orientation - theta_seg;
-  d = target.distance(point);
+  d = normal.dot(target - point);
+
+  geometry_msgs::PoseStamped proj;
+  proj.header.frame_id = costmap_ros_->getGlobalFrameID();
+  proj.header.stamp = ros::Time::now();
+  proj.pose.position.x = point.x();
+  proj.pose.position.y = point.y();
+  proj.pose.orientation.w = std::cos(theta_seg / 2);
+  proj.pose.orientation.z = std::sin(theta_seg / 2);
+  proj_pub_.publish(proj);
+}
+
+bool PathFollower::rotate(geometry_msgs::Twist& cmd_vel)
+{
+  tf2::Vector3 meas_pos;
+  double meas_rot;
+  getRobotPose(meas_pos, meas_rot);
+  double error = desired_orientation_ - meas_rot;
+
+  if (std::abs(error) < max_angle_from_goal_)
+    return true;
+
+  cmd_vel.linear.x = 0;
+  cmd_vel.linear.y = 0;
+  cmd_vel.linear.z = 0;
+  cmd_vel.angular.x = 0;
+  cmd_vel.angular.y = 0;
+  cmd_vel.angular.z = kp_ * error;
+  return false;
+}
+
+bool PathFollower::follow(geometry_msgs::Twist& cmd_vel)
+{
+  if (updateSegment())
+    return true;
+  double d, theta_e;
+  findNearestPoint(segment_[0], segment_[1], d, theta_e);
+
+  double C_theta_e = std::cos(theta_e);
+  double gain = 10 * std::abs(C_theta_e);
+  double angular_speed = speed_ * (-std::tan(theta_e) / l1_ - gain * d / C_theta_e);
+
+  cmd_vel.linear.x = speed_;
+  cmd_vel.linear.y = 0;
+  cmd_vel.linear.z = 0;
+  cmd_vel.angular.x = 0;
+  cmd_vel.angular.y = 0;
+  cmd_vel.angular.z = angular_speed;
+  return false;
 }
 
 bool PathFollower::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
 {
-  tf2::Vector3 segment_b, segment_e;
-  findNearestSegment(segment_b, segment_e);
-  double d, theta_e;
-  findNearestPoint(segment_b, segment_e, d, theta_e);
-
-  double C_theta_e = std::cos(theta_e);
-  double gain = std::abs(C_theta_e);
-  double angular_speed = speed_ * (-std::tan(theta_e) / l1_ - gain * d / C_theta_e);
+  if (state_ == ROTATING)
+  {
+    if (rotate(cmd_vel))
+    {
+      if (next_wp_index_ == 0)
+      {
+        next_wp_index_ = 1;
+        state_ = FOLLOWING;
+      }
+      else if (next_wp_index_ == plan_.size() - 1)
+        state_ = DONE;
+      else
+      {
+        ROS_WARN_STREAM("Invalid state ROTATING with wp index " << next_wp_index_);
+        state_ = DONE;
+      }
+    }
+  }
+  else if (state_ == FOLLOWING)
+  {
+    if (follow(cmd_vel))
+    {
+      desired_orientation_ = angle(plan_.at(next_wp_index_).pose.orientation);
+      ROS_INFO_STREAM("final orientation: " << desired_orientation_);
+      state_ = ROTATING;
+    }
+  }
+  if (std::isnan(cmd_vel.angular.z))
+    return false;
+  cmd_vel.angular.z = std::max(std::min(cmd_vel.angular.z, angular_velocity_max_), -angular_velocity_max_);
+  return true;
 }
 
 void PathFollower::getRobotPose(tf2::Vector3& position, double& theta)
@@ -110,17 +190,20 @@ void PathFollower::getRobotPose(tf2::Vector3& position, double& theta)
   costmap_ros_->getRobotPose(robot_pose);
   tf2::fromMsg(robot_pose.pose.position, position);
 
-  tf2::Quaternion quaternion;
-  tf2::fromMsg(robot_pose.pose.orientation, quaternion);
-  tf2::Matrix3x3 rotation(quaternion);
-
-  double roll, pitch;
-  rotation.getEulerYPR(theta, pitch, roll);
+  theta = angle(robot_pose.pose.orientation);
 }
 
-tf2::Vector3 PathFollower::computeTargetPosition(const tf2::Vector3& robot, double orientation)
+tf2::Vector3 PathFollower::computeTargetPosition()
 {
-  return robot + tf2::Vector3(l1_ * std::cos(orientation), l1_ * std::sin(orientation), 0);
+  geometry_msgs::PointStamped target_bot, target_map;
+  target_bot.header.frame_id = costmap_ros_->getBaseFrameID();
+  target_bot.point.x = l1_;
+  tf_->transform(target_bot, target_map, costmap_ros_->getGlobalFrameID());
+  tf2::Vector3 target;
+  tf2::fromMsg(target_map.point, target);
+  target.setZ(0);
+  return target;
 }
+
 }  // namespace local
 }  // namespace move_pguard

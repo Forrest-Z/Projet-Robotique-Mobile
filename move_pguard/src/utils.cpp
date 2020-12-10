@@ -31,6 +31,18 @@ double angle(const geometry_msgs::PoseStamped& pose_from, const geometry_msgs::P
   return yaw;
 }
 
+double angle(const geometry_msgs::Quaternion& quat_msgs)
+{
+  tf2::Quaternion quaternion;
+  tf2::fromMsg(quat_msgs, quaternion);
+
+  tf2::Matrix3x3 rotation(quaternion);
+
+  double roll, pitch, yaw;
+  rotation.getEulerYPR(yaw, pitch, roll);
+  return yaw;
+}
+
 float distance(const geometry_msgs::PoseStamped& from, const geometry_msgs::PoseStamped& to)
 {
   float dx = to.pose.position.x - from.pose.position.x;

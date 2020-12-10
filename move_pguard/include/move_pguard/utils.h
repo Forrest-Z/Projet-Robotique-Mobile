@@ -21,6 +21,14 @@ geometry_msgs::PoseStamped getRobotPose(const costmap_2d::Costmap2DROS& costmap)
 
 /**
  * Measure the angle between the two planar orientation
+ * TODO: comment properly
+ * @param quaternion The rotation.
+ * @return The angle along the Z axis (in rad in [-pi, pi[)
+ */
+double angle(const geometry_msgs::Quaternion& quaternion);
+
+/**
+ * Measure the angle between the two planar orientation
  *
  * @param from The initial pose
  * @param to The final pose
