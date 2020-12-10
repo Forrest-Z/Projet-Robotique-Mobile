@@ -96,6 +96,8 @@ private:
   bool is_done_;
   ros::Publisher target_pub_;
   ros::Publisher proj_pub_;
+  ros::Publisher d_pub_;
+  ros::Publisher theta_e_pub_;
   tf2_ros::Buffer* tf_;
   States state_;
 };

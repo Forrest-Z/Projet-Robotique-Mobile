@@ -1,5 +1,7 @@
 #include "move_pguard/local/path_follower.h"
 
+#include <ros/console.h>
+#include <std_msgs/Float64.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -19,6 +21,8 @@ PathFollower::PathFollower()
   path_pub_ = n.advertise<nav_msgs::Path>("local/path", 1, true);
   target_pub_ = n.advertise<geometry_msgs::PoseStamped>("local/target", 1, true);
   proj_pub_ = n.advertise<geometry_msgs::PoseStamped>("local/proj", 1, true);
+  theta_e_pub_ = n.advertise<std_msgs::Float64>("local/theta_e", 1, true);
+  d_pub_ = n.advertise<std_msgs::Float64>("local/d", 1, true);
 }
 
 void PathFollower::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
@@ -60,10 +64,12 @@ bool PathFollower::updateSegment()
   target_msgs.pose.position.y = target.y();
   target_pub_.publish(target_msgs);
   tf2::Vector3 vertex = segment_[1] - segment_[0];
+  tf2::Vector3 tangent = vertex.normalized();
+  double length = vertex.length();
 
-  if (vertex.dot(target - segment_[0]) > vertex.length2())  // The target is beyond the vertex
+  if (next_wp_index_ + 1 < plan_.size())
   {
-    if (next_wp_index_ + 1 < plan_.size())
+    if (tangent.dot(target - segment_[0]) > length)  // The target is beyond the vertex
     {
       segment_[0] = segment_[1];
       next_wp_index_++;
@@ -74,10 +80,10 @@ bool PathFollower::updateSegment()
       path_.poses.push_back(plan_.at(next_wp_index_));
       path_pub_.publish(path_);
     }
-    else
-    {
-      is_done = true;
-    }
+  }
+  else if (tangent.dot(target - segment_[0]) > length + 0.9*l1_)
+  {
+    is_done = true;
   }
   return is_done;
 }
@@ -108,6 +114,12 @@ void PathFollower::findNearestPoint(const tf2::Vector3& begin, const tf2::Vector
   proj.pose.orientation.w = std::cos(theta_seg / 2);
   proj.pose.orientation.z = std::sin(theta_seg / 2);
   proj_pub_.publish(proj);
+  std_msgs::Float64 theta_e_msg;
+  theta_e_msg.data = theta_e;
+  theta_e_pub_.publish(theta_e_msg);
+  std_msgs::Float64 d_msg;
+  d_msg.data = d;
+  d_pub_.publish(d_msg);
 }
 
 bool PathFollower::rotate(geometry_msgs::Twist& cmd_vel)
@@ -125,7 +137,7 @@ bool PathFollower::rotate(geometry_msgs::Twist& cmd_vel)
   cmd_vel.linear.z = 0;
   cmd_vel.angular.x = 0;
   cmd_vel.angular.y = 0;
-  cmd_vel.angular.z = kp_ * error;
+  cmd_vel.angular.z = angular_velocity_max_ * std::sin(error);
   return false;
 }
 
@@ -135,10 +147,15 @@ bool PathFollower::follow(geometry_msgs::Twist& cmd_vel)
     return true;
   double d, theta_e;
   findNearestPoint(segment_[0], segment_[1], d, theta_e);
-
-  double C_theta_e = std::cos(theta_e);
-  double gain = 10 * std::abs(C_theta_e);
-  double angular_speed = speed_ * (-std::tan(theta_e) / l1_ - gain * d / C_theta_e);
+  double angular_speed = 0;
+  if (std::abs(theta_e) > 0.9 * M_PI / 2)
+    angular_speed = -angular_velocity_max_ * std::sin(theta_e);
+  else
+  {
+    double C_theta_e = std::cos(theta_e);
+    double gain = 5 * std::abs(C_theta_e);
+    angular_speed = speed_ * (-std::tan(theta_e) / l1_ - gain * d / C_theta_e);
+  }
 
   cmd_vel.linear.x = speed_;
   cmd_vel.linear.y = 0;
